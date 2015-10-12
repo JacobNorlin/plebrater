@@ -4,6 +4,7 @@ require('babel/register');
 var Rx = require('rx')
 var request = require('request')
 var _ = require('lodash')
+var EventEmitter = require('events').EventEmitter
 
 export default class SpotifyHandler{
 
@@ -11,25 +12,37 @@ export default class SpotifyHandler{
 
 	constructor(accessToken, refreshToken){
 		this.postObservable = Rx.Observable.fromNodeCallback(request.post, undefined, (incomingMessage, token) => {return token});
-	    this.getObservable = Rx.Observable.fromNodeCallback(request.get, undefined, (incomingMessage, token) => {return token});
+		
+	    this.getObservable = Rx.Observable.fromNodeCallback(request.get, undefined, (incomingMessage, token) => {return token})
+
+
 	    this.accessToken = accessToken;
 	    this.refreshToken = refreshToken;
+	    this.eventEmitter = new EventEmitter();
 
-	    console.log(this.postObservable)
+	    let requestQueue = Rx.Observable.fromEvent(this.eventEmitter, 'apiRequest', (apiUrl, id) => {
+	    	let options = {
+				 url: apiUrl,
+				 headers: { 'Authorization': 'Bearer ' + this.accessToken },
+				 json: true
+				};
+			return {obs: this.getObservable(options), id: id};
+	    })
 
-	    this.client_id = '972ff492274d4cf7ae53df563ff6aa6f'; // Your client id
-		this.client_secret = 'bfc69044fb40425eab886d809f2471e6'; // Your client secret
-		this.redirect_uri = 'http://localhost:8888/callback'; // Your redirect uri 
+    
+
+	    this.someId = 0;
 
 	}
 
+
 	authenticatedGet(apiUrl){
 		let options = {
-			 url: apiUrl,
-			 headers: { 'Authorization': 'Bearer ' + this.accessToken },
-			 json: true
-		};
-		return this.getObservable(options);
+				 url: apiUrl,
+				 headers: { 'Authorization': 'Bearer ' + this.accessToken },
+				 json: true
+				};
+		return this.getObservable(options)
 	}
 
 	userDataObs(){
@@ -43,7 +56,7 @@ export default class SpotifyHandler{
 	multiRequest(apiUrl, limit){
 		return this.authenticatedGet(apiUrl+'/?limit='+limit)
 			.flatMap(data => {
-				let nRequests = (data.total % limit) - 1
+				let nRequests = (data.total % limit)
 				let head = Rx.Observable.from(data.items)
 				if(data.next != null){
 					let tail = this.tailRequest(apiUrl, nRequests, limit)
@@ -54,16 +67,16 @@ export default class SpotifyHandler{
 			})
 	}
 
+
 	tailRequest(apiUrl, nRequests, limit){
-		var pace = Rx.Observable.interval(1000).take(nRequests)
-		var pacedReq = Rx.Observable.zip(pace, Rx.Observable.range(1, nRequests));
-		return pacedReq
+		return Rx.Observable.range(1, nRequests)
 			.map((_, x) => {
-				return this.authenticatedGet(apiUrl+'/offset='+x*limit)
+				return this.authenticatedGet(apiUrl+'/?offset='+x*limit)
 					.flatMap(data => {
 						return Rx.Observable.from(data.items)
 					})
-			}).mergeAll()
+			})
+			.mergeAll()
 	}
 
 	playlistsObs(userId){
@@ -74,7 +87,7 @@ export default class SpotifyHandler{
 		return this.multiRequest(playlist.tracks.href, 100)	
 	}
 
-	albumsOfPlaylist(playlist){
+	albumsInPlaylist(playlist){
 		let tracks = this.tracksOfPlaylist(playlist)
 		return tracks.map(trackObject => {
 			return trackObject.track.album.name;
@@ -96,15 +109,6 @@ export default class SpotifyHandler{
 			})
 	}
 
-	albumsInPlaylists(){
-		return this.tracksOfAllPlaylistsForCurrentUserObs()
-			.map(trackData => {
-				return Rx.Observable.fromArray(_(trackData.items)
-					.map(tracks => {
-						return tracks.track.album.name;
-					}).values())
-			})
-	}
 
 
 }

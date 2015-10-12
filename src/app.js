@@ -19,6 +19,7 @@ var Rx = require('rx');
 var _ = require('lodash');
 var $ = require('jquery');
 var SpotifyHandler = require('./SpotifyHandler.js')
+var PitchforkHandler = require('./PitchforkHandler.js')
 
 var client_id = '972ff492274d4cf7ae53df563ff6aa6f'; // Your client id
 var client_secret = 'bfc69044fb40425eab886d809f2471e6'; // Your client secret
@@ -98,6 +99,7 @@ app.get('/callback', function(req, res) {
     request.post(authOptions, (error, response, body) => {
 
       var spotifyHandler = new SpotifyHandler(body.access_token, body.refresh_token);
+      var pitchforkHandler = new PitchforkHandler();
 
       spotifyHandler.userDataObs()
         .flatMap(data => {
@@ -105,13 +107,16 @@ app.get('/callback', function(req, res) {
         })
         .first()
         .flatMap(data => {
-          return spotifyHandler.albumsOfPlaylist(data)
+          return spotifyHandler.albumsInPlaylist(data)
         })
-        .subscribe(data => {
-          console.log(data);
-        },
-        err => {
-          console.log(err);
+        .take(5)
+        .flatMap(albumName => {
+          return pitchforkHandler.getAlbumScore(albumName);
+        })
+
+      pitchforkHandler.getAlbumScore('In the aeroplane over the sea')
+        .subscribe(x => {
+          console.log(x[0]);
         })
 
     })

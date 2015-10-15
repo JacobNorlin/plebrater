@@ -21,9 +21,13 @@ var $ = require('jquery');
 var SpotifyHandler = require('./SpotifyHandler.js')
 var PitchforkHandler = require('./PitchforkHandler.js')
 
-var client_id = ''; // Your client id
-var client_secret = ''; // Your client secret
-var redirect_uri = 'http://localhost:8888/callback'; // Your redirect uri
+var cfg = require('./config.js')
+console.log(cfg)
+var spotifyCfg = cfg.spotify
+
+var client_id = spotifyCfg.client_id; // Your client id
+var client_secret =spotifyCfg.client_secret; // Your client secret
+var redirect_uri = spotifyCfg.redirect_uri;
 
 /**
  * Generates a random string containing numbers and letters
@@ -109,6 +113,8 @@ app.get('/callback', function(req, res) {
         .flatMap(playlist => {
           let albums = spotifyHandler.albumsInPlaylist(playlist)
           let pace = 100
+          //this sequence does not terminate unless take is used, but I dont know how many albums there are...
+          //fuck it just send live updates to client with socket :^)
           let pacedRequests = Rx.Observable.zip(Rx.Observable.interval(pace), albums, (_, x) => {return x});
           let albumScores = pacedRequests
             .flatMap(album => {

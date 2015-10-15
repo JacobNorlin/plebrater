@@ -12,7 +12,16 @@ export default class PitchforkHandler{
 	}
 
 	getAlbumScore(albumName){
-		return Rx.Observable.fromEvent(new p4k.Search(albumName), 'ready');
+		return Rx.Observable.fromEvent(new p4k.Search(albumName), 'ready')
+			.map(results => {
+				//let data = {albumName:albumName}
+				if(results.length > 0){
+					return results[0].attributes.score;
+				}else{
+					return 0;
+				}
+			})
 	}
+
 
 }

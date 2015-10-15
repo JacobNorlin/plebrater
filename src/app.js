@@ -106,18 +106,29 @@ app.get('/callback', function(req, res) {
           return spotifyHandler.playlistsObs(data.id);
         })
         .first()
-        .flatMap(data => {
-          return spotifyHandler.albumsInPlaylist(data)
+        .flatMap(playlist => {
+          let albums = spotifyHandler.albumsInPlaylist(playlist)
+          let pace = 100
+          let pacedRequests = Rx.Observable.zip(Rx.Observable.interval(pace), albums).map((_, x) => {return x});
+          let albumScores = pacedRequests
+            .flatMap(album => {
+              return pitchforkHandler.getAlbumScore(album);
+            })
+          let plebRating = albumScores
+            .scan((acc, i, idx, source) => {
+              if(i == 0){
+                return acc -1
+              }else{
+                return acc  +i
+              }
+            },0)
+            return plebRating
         })
-        .take(5)
-        .flatMap(albumName => {
-          return pitchforkHandler.getAlbumScore(albumName);
-        })
-
-      pitchforkHandler.getAlbumScore('In the aeroplane over the sea')
         .subscribe(x => {
-          console.log(x[0]);
-        })
+          console.log(x);
+        },
+        x => {console.log(x)},
+        x => {console.log("completed")})
 
     })
 

@@ -21,8 +21,8 @@ var $ = require('jquery');
 var SpotifyHandler = require('./SpotifyHandler.js')
 var PitchforkHandler = require('./PitchforkHandler.js')
 
-var client_id = '972ff492274d4cf7ae53df563ff6aa6f'; // Your client id
-var client_secret = 'bfc69044fb40425eab886d809f2471e6'; // Your client secret
+var client_id = ''; // Your client id
+var client_secret = ''; // Your client secret
 var redirect_uri = 'http://localhost:8888/callback'; // Your redirect uri
 
 /**
@@ -109,7 +109,7 @@ app.get('/callback', function(req, res) {
         .flatMap(playlist => {
           let albums = spotifyHandler.albumsInPlaylist(playlist)
           let pace = 100
-          let pacedRequests = Rx.Observable.zip(Rx.Observable.interval(pace), albums).map((_, x) => {return x});
+          let pacedRequests = Rx.Observable.zip(Rx.Observable.interval(pace), albums, (_, x) => {return x});
           let albumScores = pacedRequests
             .flatMap(album => {
               return pitchforkHandler.getAlbumScore(album);

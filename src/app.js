@@ -68,6 +68,10 @@ app.get('/login', function(req, res) {
     }));
 });
 
+app.get('/playlists', (req, res) => {
+
+})
+
 app.get('/callback', function(req, res) {
 
   // your application requests refresh and access tokens
@@ -101,6 +105,8 @@ app.get('/callback', function(req, res) {
       };
 
     request.post(authOptions, (error, response, body) => {
+
+      res.send({'access_token': body.access_token})
 
       var spotifyHandler = new SpotifyHandler(body.access_token, body.refresh_token);
       var pitchforkHandler = new PitchforkHandler();
@@ -137,6 +143,7 @@ app.get('/callback', function(req, res) {
         x => {console.log("completed")})
 
     })
+
 
     
 
